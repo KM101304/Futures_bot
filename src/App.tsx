@@ -1,12 +1,11 @@
 import React, { useEffect } from 'react';
-import { Activity, Clock, Play, Pause, StopCircle, Server, Cpu, Shield, Globe2, BarChart3, Newspaper } from 'lucide-react';
+import { Activity, Clock, Globe2, BarChart3, Newspaper } from 'lucide-react';
 import { useAppStore } from './store';
 import { initLiveEngine } from './services/LiveEngine';
 import { GeopoliticsMap } from './components/GeopoliticsMap';
-// We will stub the Dashboard and News for now if they are just the old content, but let's 
-// just place placeholders to prove the tabs work perfectly for content.
-// Actually, let's keep the dashboard logic in a separate component.
 import { MainDashboard } from './components/MainDashboard';
+import { NewsTerminal } from './components/NewsTerminal';
+import { Markets } from './components/Markets';
 
 const App: React.FC = () => {
   const activeTab = useAppStore(state => state.activeTab);
@@ -32,7 +31,7 @@ const App: React.FC = () => {
               </div>
               <div>
                 <h1 className="text-lg font-bold tracking-tight">COMMTRADER PRO</h1>
-                <p className="text-xs text-[#777]">NEWS-DRIVEN COMMODITIES BOT v2.5.0</p>
+                <p className="text-xs text-[#777]">NEWS-DRIVEN COMMODITIES BOT v3.0.0</p>
               </div>
             </div>
             <div className="h-8 w-px bg-[#333]" />
@@ -66,6 +65,7 @@ const App: React.FC = () => {
                 {tab === 'GEOPOLITICS' && <Globe2 className="w-4 h-4" />}
                 {tab === 'DASHBOARD' && <BarChart3 className="w-4 h-4" />}
                 {tab === 'NEWS' && <Newspaper className="w-4 h-4" />}
+                {tab === 'MARKETS' && <Activity className="w-4 h-4" />}
                 {tab}
               </div>
             </button>
@@ -75,12 +75,16 @@ const App: React.FC = () => {
 
       {/* Main Content Area - Render based on routing */}
       <main className="flex-1 p-4 grid grid-cols-12 gap-4 min-h-0 overflow-hidden">
-        {activeTab === 'GEOPOLITICS' ? (
+        {activeTab === 'GEOPOLITICS' && (
           <section className="col-span-12 h-full">
              <GeopoliticsMap />
           </section>
-        ) : (
-          <MainDashboard />
+        )}
+        {activeTab === 'DASHBOARD' && <MainDashboard />}
+        {activeTab === 'NEWS' && <NewsTerminal />}
+        {activeTab === 'MARKETS' && <Markets />}
+        {activeTab === 'SYSTEM' && (
+          <div className="col-span-12 text-center py-20 text-[#555] font-mono">SYSTEM DIAGNOSTICS OFFLINE</div>
         )}
       </main>
 

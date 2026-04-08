@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { 
-  Activity, TrendingUp, AlertTriangle, Shield, Zap, 
-  BarChart3, Newspaper, DollarSign, Layers, Server, Cpu, RefreshCw, Filter, GitCommit,
-  BookOpen
+  Activity, TrendingUp, AlertTriangle, Zap, 
+  BarChart3, DollarSign, Server
 } from 'lucide-react';
 import { useAppStore } from '../store';
+import { TradingTicket } from './TradingTicket';
 
 const initialRiskMetrics = {
   totalEquity: 1000000,
@@ -67,7 +67,6 @@ const MetricCard: React.FC<{ label: string; value: string | number; subValue?: s
 );
 
 export const MainDashboard: React.FC = () => {
-  const news = useAppStore(state => state.news);
   const [chartData, setChartData] = useState<any[]>([]);
 
   useEffect(() => {
@@ -144,26 +143,9 @@ export const MainDashboard: React.FC = () => {
           </div>
         </section>
 
-        {/* Right Sidebar - News Feed */}
-        <aside className="col-span-3 space-y-4 overflow-y-auto">
-          <div className="bg-[#111] border border-[#333]">
-            <div className="flex items-center justify-between px-4 py-2 border-b border-[#333]">
-              <h3 className="text-sm font-bold text-[#ccc] flex items-center gap-2">
-                <Newspaper className="w-4 h-4" /> NEWS WIRE
-              </h3>
-            </div>
-            <div className="p-3 space-y-2 max-h-96 overflow-y-auto">
-              {news.map(n => (
-                <div key={n.id} className="bg-black border border-[#444] p-2">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-[#777]">{n.source}</span>
-                    <StatusBadge status={n.urgency} />
-                  </div>
-                  <p className="text-xs text-white mb-1">{n.headline}</p>
-                </div>
-              ))}
-            </div>
-          </div>
+        {/* Right Sidebar - Execution Engine */}
+        <aside className="col-span-3 space-y-4 overflow-y-auto h-full">
+          <TradingTicket />
         </aside>
     </>
   );

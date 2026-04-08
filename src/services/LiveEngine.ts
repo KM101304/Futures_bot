@@ -1,87 +1,90 @@
 import { useAppStore } from '../store';
-import { geoInterpolate } from 'd3-geo';
 
-// Accurate trade routes mapping (Start/End exact Lon/Lat arrays)
-const routes = [
-  { name: 'Suez to Rotterdam', path: [[32.3, 31.2], [4.0, 51.9]] },
-  { name: 'Hormuz to Singapore', path: [[56.5, 26.5], [103.8, 1.2]] },
-  { name: 'Houston to Europort', path: [[-94.8, 29.3], [4.0, 51.9]] },
-  { name: 'Panama to Tokyo', path: [[-79.5, 8.9], [139.7, 35.6]] },
-  { name: 'Ras Tanura to Cushing', path: [[50.1, 26.6], [-94.0, 28.0]] }, // Gulf to US Gulf Coast
-  { name: 'Black Sea to Med', path: [[31.0, 43.5], [26.0, 39.0]] }
-];
-
-const shipNames = ['Seawise Giant', 'Pioneering Spirit', 'TI Oceania', 'Berge Emperor', 'Knock Nevis', 'Ever Given', 'Emma Maersk', 'MSC Oscar'];
-
-// Generate accurate interpolators for ships
-const activeShips = Array.from({ length: 40 }).map((_, i) => {
-  const route = routes[i % routes.length];
-  // Create an accurate great circle interpolator
-  const arc = geoInterpolate(route.path[0] as [number, number], route.path[1] as [number, number]);
-  // Random starting position along the arc (0 to 1)
-  const position = Math.random();
-  const speed = 0.0001 + (Math.random() * 0.0002); // T in arc progression per tick
-  const direction = Math.random() > 0.5 ? 1 : -1;
-  
-  return {
-    id: `VSL-${1000 + i}`,
-    name: shipNames[i % shipNames.length] + ` ${i}`,
-    type: i % 3 === 0 ? 'VLCC' : 'Suezmax',
-    route,
-    arc,
-    position,
-    speed,
-    direction,
-    destination: direction === 1 ? route.name.split(' to ')[1] : route.name.split(' to ')[0],
-    lonLat: arc(position) as [number, number]
-  };
-});
+// Helper to deduce coordinate based on text footprint
+const deduceGeo = (text: string): [number, number] => {
+  const t = text.toLowerCase();
+  if (t.includes('ukraine') || t.includes('kyiv') || t.includes('russia')) return [35.0, 48.0]; // Eastern Europe
+  if (t.includes('gaza') || t.includes('israel') || t.includes('hamas')) return [34.7, 31.5]; // Levant
+  if (t.includes('sudan') || t.includes('khartoum')) return [32.5, 15.6]; // Sudan
+  if (t.includes('taiwan') || t.includes('china') || t.includes('beijing')) return [120.9, 23.6]; // South China Sea
+  if (t.includes('korea')) return [127.0, 37.5]; // Korean Peninsula
+  if (t.includes('yemen') || t.includes('houthi') || t.includes('red sea')) return [45.0, 15.5]; // Yemen
+  // Random global scatter for general conflicts
+  return [(Math.random() * 360 - 180), (Math.random() * 140 - 70)]; 
+};
 
 export const initLiveEngine = () => {
-  // Update ships accurately 10 times a second
   setInterval(() => {
-    const updatedShips = activeShips.map(s => {
-      s.position += s.speed * s.direction;
-      if (s.position > 1) { s.position = 1; s.direction = -1; s.destination = s.route.name.split(' to ')[0]; }
-      if (s.position < 0) { s.position = 0; s.direction = 1; s.destination = s.route.name.split(' to ')[1]; }
-      
-      const newPos = s.arc(s.position) as [number, number];
-      
-      return {
-        id: s.id,
-        name: s.name,
-        type: s.type,
-        coordinates: newPos,
-        heading: 0, // Placeholder
-        speed: 14.5 + Math.random(), // Knots
-        status: 'UNDER_WAY' as const,
-        destination: s.destination
-      };
-    });
-    
-    useAppStore.getState().updateShips(updatedShips);
-  }, 100);
+    useAppStore.getState().updateMarketPrices(true);
+  }, 1000);
 
-  // Poll for real active conflict news every 30 seconds
-  // Simulating accurate geopolitical data parsing due to free API limits constraints in this demo
-  setInterval(() => {
-    const conflicts = [
-      { geo: [35.0, 31.5], headline: "Tensions escalate near Eastern Med energy fields", score: 0.9, urgency: 'IMMEDIATE' as const },
-      { geo: [44.0, 15.0], headline: "Red Sea transit security alert issued for all oil tankers", score: 0.95, urgency: 'IMMEDIATE' as const },
-      { geo: [31.5, 46.5], headline: "Black Sea export disruption reported", score: 0.85, urgency: 'SCHEDULED' as const }
-    ];
-    
-    const triggered = conflicts[Math.floor(Math.random() * conflicts.length)];
-    
-    useAppStore.getState().addNews([{
-      id: `NWS-${Date.now()}`,
-      headline: triggered.headline,
-      source: 'Global Conflict Feed',
-      timestamp: new Date(),
-      sentiment: -0.8 - Math.random() * 0.2, // Always highly negative for conflict
-      urgency: triggered.urgency,
-      impactScore: triggered.score,
-      relatedGeo: triggered.geo as [number, number] // Accurate geographic tagging for the map
-    }]);
-  }, 10000); // 10 seconds for demo pacing
+  // 1. REAL DATA: OpenSky Network Flights (GLOBAL Scope)
+  const fetchFlights = async () => {
+    try {
+      // Removing bounding box to get global data. 
+      const res = await fetch('https://opensky-network.org/api/states/all');
+      if (!res.ok) throw new Error('OpenSky rate limited or unavailable');
+      const data = await res.json();
+      
+      const states = data.states || [];
+      // Pick 800 random global flights to prevent map overload but show global scale
+      const shuffled = states.sort(() => 0.5 - Math.random());
+      const planes = shuffled.slice(0, 800).map((s: any) => {
+        if (s[5] !== null && s[6] !== null) {
+          return {
+            id: s[0],
+            callsign: s[1]?.trim() || 'UNKNOWN',
+            origin_country: s[2],
+            coordinates: [s[5], s[6]] as [number, number],
+            velocity: s[9] || 0,
+            true_track: s[10] || 0,
+            altitude: s[13] || 0
+          };
+        }
+        return null;
+      }).filter(Boolean);
+
+      useAppStore.getState().updatePlanes(planes as any);
+    } catch (err) {
+      console.warn("OpenSky API error:", err);
+    }
+  };
+
+  // 2. REAL DATA: Global World News via RSS-to-JSON
+  const fetchNews = async () => {
+    try {
+      const res = await fetch('https://api.rss2json.com/v1/api.json?rss_url=https://feeds.bbci.co.uk/news/world/rss.xml');
+      const data = await res.json();
+      
+      if (data.items && data.items.length > 0) {
+        const newsItems = data.items.map((item: any, idx: number) => {
+          const content = `${item.title} ${item.description}`.toLowerCase();
+          const isConflict = /war|strike|army|military|tension|bomb|missile|attack|clash|rebel|troop/i.test(content);
+          
+          return {
+            id: `BBC-${Date.now()}-${idx}`,
+            headline: item.title,
+            description: item.description,
+            url: item.link,
+            source: 'BBC Live Wire',
+            timestamp: new Date(item.pubDate),
+            sentiment: isConflict ? -0.9 : 0.2,
+            urgency: isConflict ? 'IMMEDIATE' : 'SCHEDULED',
+            impactScore: isConflict ? 0.95 : 0.3,
+            relatedGeo: isConflict ? deduceGeo(content) : undefined
+          };
+        });
+
+        useAppStore.getState().addNews(newsItems);
+      }
+    } catch (err) {
+      console.warn("News RSS Fetch error:", err);
+    }
+  };
+
+  fetchFlights();
+  fetchNews();
+
+  setInterval(fetchFlights, 20000);
+  setInterval(fetchNews, 60000);
 };
