@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+/* Bloomberg Brutalist Financial Theme */
+@layer base {
+  * {
+    font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Consolas', monospace;
+    border-radius: 0 !important; /* Force sharp edges everywhere */
+  }
+  
+  body {
+    @apply bg-black text-white antialiased;
+    font-feature-settings: 'tnum' on, 'lnum' on;
+    margin: 0;
+    overflow-x: hidden;
+  }
+  
+  /* Custom scrollbar for financial data panels */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-black border-l border-[#333];
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-[#444];
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-[#666];
+  }
+  
+  /* Remove focus outlines for cleaner financial UI */
+  button:focus, input:focus {
+    outline: none;
+  }
+  
+  /* Data table row hover effect */
+  tr:hover {
+    @apply bg-[#111];
+  }
+}
+
+/* Utility classes for financial displays */
+@layer utilities {
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+  
+  .blink {
+    animation: blink 1s infinite;
+  }
+  
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+}
